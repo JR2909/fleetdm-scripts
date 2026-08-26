@@ -1,0 +1,63 @@
+services:
+  mysql:
+    image: 'mysql:8'
+    volumes:
+      - 'mysql-data:/var/lib/mysql'
+    environment:
+      - MYSQL_ROOT_PASSWORD=${SERVICE_PASSWORD_ROOT}
+      - MYSQL_DATABASE=fleet
+      - MYSQL_USER=${SERVICE_USER_MYSQL}
+      - MYSQL_PASSWORD=${SERVICE_PASSWORD_MYSQL}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 20s
+      retries: 10
+
+  redis:
+    image: 'redis:7-alpine'
+    volumes:
+      - 'redis-data:/data'
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  fleet-migrate:
+    image: 'fleetdm/fleet:latest'
+    command: fleet prepare db
+    environment:
+      - FLEET_MYSQL_ADDRESS=mysql:3306
+      - FLEET_MYSQL_DATABASE=fleet
+      - FLEET_MYSQL_USERNAME=${SERVICE_USER_MYSQL}
+      - FLEET_MYSQL_PASSWORD=${SERVICE_PASSWORD_MYSQL}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  fleet:
+    image: 'fleetdm/fleet:latest'
+    environment:
+      - FLEET_MYSQL_ADDRESS=mysql:3306
+      - FLEET_MYSQL_DATABASE=fleet
+      - FLEET_MYSQL_USERNAME=${SERVICE_USER_MYSQL}
+      - FLEET_MYSQL_PASSWORD=${SERVICE_PASSWORD_MYSQL}
+      - FLEET_REDIS_ADDRESS=redis:6379
+      - FLEET_SERVER_PRIVATE_KEY=${SERVICE_FLEET_PRIVATE_KEY}
+      - FLEET_SERVER_TLS=false
+      - PORT=8080
+    volumes:
+      - 'fleet-data:/fleet'
+      - 'fleet-logs:/logs'
+    depends_on:
+      fleet-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  redis-data:
+  fleet-data:
+  fleet-logs:
