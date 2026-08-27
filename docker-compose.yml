@@ -38,14 +38,15 @@ services:
 
   fleet:
     image: 'fleetdm/fleet:latest'
+    restart: unless-stopped
     environment:
       - FLEET_MYSQL_ADDRESS=mysql:3306
       - FLEET_MYSQL_DATABASE=fleet
       - FLEET_MYSQL_USERNAME=${SERVICE_USER_MYSQL}
       - FLEET_MYSQL_PASSWORD=${SERVICE_PASSWORD_MYSQL}
       - FLEET_REDIS_ADDRESS=redis:6379
-      - FLEET_SERVER_PRIVATE_KEY=${SERVICE_FLEET_PRIVATE_KEY}
       - FLEET_SERVER_TLS=false
+      - FLEET_SERVER_URL=httüs://domain.example
       - PORT=8080
     volumes:
       - 'fleet-data:/fleet'
